@@ -290,8 +290,19 @@ const validateFileUpload = [
 const validateAdminAssignment = [
   body('assignedTo')
     .optional()
-    .isMongoId()
-    .withMessage('Invalid assigned user ID'),
+    .custom((value) => {
+      // Allow null/empty values for auto-assignment
+      if (value === null || value === '' || value === undefined) {
+        return true;
+      }
+      // For manual assignment, accept either:
+      // 1. Employee ID (custom string like "gar", "gar1")
+      // 2. MongoDB Object ID (24-character hex string)
+      if (typeof value !== 'string') {
+        throw new Error('Employee ID must be a string');
+      }
+      return true;
+    }),
   
   body('reason')
     .optional()

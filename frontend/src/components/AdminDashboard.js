@@ -533,11 +533,20 @@ const AdminDashboard = ({ user }) => {
                               }}
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                const employeeId = prompt('Enter Employee ID to assign (or leave empty for auto-assign):');
+                                const employeeId = prompt('Enter Employee ID to assign or leave empty for auto-assign:');
                                 if (employeeId !== null) {
+                                  const trimmedId = employeeId.trim();
+                                  
+                                  // Validate input - just check it's not empty
+                                  if (trimmedId !== '') {
+                                    // Will be validated on backend
+                                  }
+                                  
                                   try {
-                                    await apiService.assignIssue(issue._id || issue.id, { assignedTo: employeeId || null });
-                                    toast.success('Issue assigned');
+                                    // Handle empty string as null for auto-assignment
+                                    const assignData = trimmedId === '' ? { assignedTo: null } : { assignedTo: trimmedId };
+                                    await apiService.assignIssue(issue._id || issue.id, assignData);
+                                    toast.success('Issue assigned successfully');
                                     const fresh = await apiService.getAdminDashboard();
                                     setStats(fresh.data || fresh);
                                   } catch (err) {

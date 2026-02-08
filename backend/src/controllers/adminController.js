@@ -315,10 +315,34 @@ class AdminController {
       // Handle both string and non-string values
       const assignedToValue = assignedTo && typeof assignedTo === 'string' ? assignedTo.trim() : assignedTo;
       if (assignedToValue && assignedToValue !== '' && assignedToValue !== 'null' && assignedToValue !== null) {
-        // Manual assignment - use the provided user ID
-        assignedUser = await User.findById(assignedToValue);
+        // Manual assignment - look up by Employee ID field first
+        // Only try _id lookup if the value looks like a MongoDB ObjectId
+        const isMongoId = /^[0-9a-fA-F]{24}$/.test(assignedToValue);
+        
+        let query;
+        if (isMongoId) {
+          // If it looks like a MongoDB ID, search by both employeeId and _id
+          query = {
+            $or: [
+              { employeeId: assignedToValue },
+              { _id: assignedToValue }
+            ],
+            role: { $in: ['field-staff', 'supervisor', 'commissioner', 'employee'] },
+            isActive: true
+          };
+        } else {
+          // Otherwise, only search by employeeId
+          query = {
+            employeeId: assignedToValue,
+            role: { $in: ['field-staff', 'supervisor', 'commissioner', 'employee'] },
+            isActive: true
+          };
+        }
+        
+        assignedUser = await User.findOne(query);
+        
         if (!assignedUser) {
-          return res.status(404).json({ success: false, message: 'Assigned user not found' });
+          return res.status(404).json({ success: false, message: `Employee with ID "${assignedToValue}" not found` });
         }
         // Verify the user is an active employee
         const employeeRoles = ['field-staff', 'supervisor', 'commissioner', 'employee'];
