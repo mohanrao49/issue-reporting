@@ -398,19 +398,23 @@ class AdminController {
         
         await issue.save();
 
-        // Notify all employees in the department
-        const notificationPromises = departmentEmployees.map(emp => 
+        // Notify ONLY field-staff employees (not supervisors or commissioners yet)
+        // Supervisors and commissioners will be notified when issue escalates
+        const fieldStaffOnly = departmentEmployees.filter(emp => 
+          emp.role === 'field-staff' || emp.role === 'employee'
+        );
+        const notificationPromises = fieldStaffOnly.map(emp => 
           notificationService.notifyIssueAssignment(issue, emp, req.user)
         );
         await Promise.all(notificationPromises);
 
         res.json({
           success: true,
-          message: `Issue assigned to department. ${departmentEmployees.length} employees notified.`,
+          message: `Issue assigned to field-staff. ${fieldStaffOnly.length} field-staff notified.`,
           data: { 
             issue,
             assignedToDepartment: issueCategory,
-            employeesNotified: departmentEmployees.length
+            employeesNotified: fieldStaffOnly.length
           }
         });
         

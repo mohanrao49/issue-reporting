@@ -434,8 +434,8 @@ class IssueController {
               }
 
               // Use ML-detected priority if available
-              if (mlResult && mlResult.priority) {
-                priority = mlResult.priority === 'urgent' ? 'urgent' : 'medium';
+              if (mlResult && mlResult.urgency) {
+                priority = mlResult.urgency;
               }
             } else {
               // ML service returned error - log but continue with default category
@@ -545,13 +545,17 @@ class IssueController {
           
           await issue.save();
 
-          // Notify all employees in the department
-          const notificationPromises = departmentEmployees.map(emp => 
+          // Notify ONLY field-staff employees (not supervisors or commissioners yet)
+          // Supervisors and commissioners will be notified when issue escalates
+          const fieldStaffOnly = departmentEmployees.filter(emp => 
+            emp.role === 'field-staff' || emp.role === 'employee'
+          );
+          const notificationPromises = fieldStaffOnly.map(emp => 
             notificationService.notifyIssueAssignment(issue, emp, req.user)
           );
           await Promise.all(notificationPromises);
           
-          console.log(`✅ Issue auto-assigned to department "${issueCategory}". ${departmentEmployees.length} employees notified.`);
+          console.log(`✅ Issue auto-assigned to field-staff in department "${issueCategory}". ${fieldStaffOnly.length} field-staff notified.`);
         } else {
           // No employees found for this department - issue remains unassigned
           // Admins can manually assign it later

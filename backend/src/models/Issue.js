@@ -222,7 +222,7 @@ const issueSchema = new mongoose.Schema({
   statusHistory: [{
     status: {
       type: String,
-      enum: ['reported', 'in-progress', 'resolved', 'closed']
+      enum: ['reported', 'assigned', 'accepted', 'in-progress', 'resolved', 'closed', 'escalated']
     },
     changedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -333,28 +333,28 @@ issueSchema.methods.calculateEscalationDeadline = function(priority, role) {
   const now = new Date();
   let hours = 0;
   
-  // HIGH PRIORITY
+  // HIGH/URGENT PRIORITY
   if (priority === 'high' || priority === 'urgent') {
     if (role === 'field-staff') {
-      hours = 5; // 4-6 hours, use 5 as average
+      hours = 2; // Escalate to supervisor within 2 hours
     } else if (role === 'supervisor') {
-      hours = 4;
+      hours = 2; // Escalate to commissioner within 2 hours
     }
   }
   // MEDIUM PRIORITY
   else if (priority === 'medium') {
     if (role === 'field-staff') {
-      hours = 24; // 1 day
+      hours = 12; // Escalate to supervisor within 12 hours
     } else if (role === 'supervisor') {
-      hours = 24; // 1 day
+      hours = 12; // Escalate to commissioner within 12 hours
     }
   }
   // LOW PRIORITY
   else if (priority === 'low') {
     if (role === 'field-staff') {
-      hours = 48; // 2 days
+      hours = 24; // Escalate to supervisor within 24 hours
     } else if (role === 'supervisor') {
-      hours = 36; // 1.5 days
+      hours = 24; // Escalate to commissioner within 24 hours
     }
   }
   
@@ -371,6 +371,7 @@ issueSchema.methods.escalate = function(toRole, escalatedBy, reason = 'Time limi
     escalatedAt: new Date(),
     escalatedBy,
     reason,
+    
     priority: this.priority
   });
   

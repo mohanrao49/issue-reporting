@@ -15,68 +15,80 @@ class EmployeeController {
       const filter = {};
 
       if (employeeRoles.includes(user.role)) {
-        // Field Staff: See complaints in their department (either assigned to them OR assigned to department)
+        // Get user's departments
+        const userDepartments = user.departments && user.departments.length > 0 
+          ? user.departments 
+          : (user.department ? [user.department] : []);
+        
+        const hasAllDepartments = userDepartments.includes('All');
+        
+        // Field Staff: ONLY see issues where assignedRole is 'field-staff'
         if (user.role === 'field-staff' || user.role === 'employee') {
-          // Get user's departments
-          const userDepartments = user.departments && user.departments.length > 0 
-            ? user.departments 
-            : (user.department ? [user.department] : []);
-          
-          // Show issues that are either:
+          // Show issues that are:
           // 1. Assigned specifically to this user, OR
-          // 2. Assigned to the department (assignedRole set but assignedTo is null/empty) and match user's department
+          // 2. Assigned to field-staff role (assignedRole = 'field-staff') and match user's department
+          const baseCondition = {
+            assignedRole: 'field-staff',
+            $or: [
+              { assignedTo: null },
+              { assignedTo: { $exists: false } }
+            ]
+          };
+          
+          // Add department filter only if user doesn't have 'All'
+          if (!hasAllDepartments && userDepartments.length > 0) {
+            baseCondition.category = { $in: userDepartments };
+          }
+          
           filter.$or = [
             { assignedTo: user._id }, // Specifically assigned to this user
-            {
-              // Assigned to department (assignedRole exists but assignedTo is null or not set)
-              assignedRole: { $exists: true },
-              $or: [
-                { assignedTo: null },
-                { assignedTo: { $exists: false } }
-              ],
-              // Must match user's department
-              category: userDepartments.includes('All') 
-                ? { $exists: true } // If user has 'All', show all department-assigned issues
-                : { $in: userDepartments }
-            }
+            baseCondition
           ];
         }
-        // Supervisor: See complaints assigned to them + escalated from field-staff
+        // Supervisor: ONLY see issues where assignedRole is 'supervisor' (escalated to supervisor level)
         else if (user.role === 'supervisor') {
-          filter.$or = [
-            { assignedTo: user._id },
-            { 
-              assignedRole: 'field-staff',
-              status: { $in: ['escalated', 'in-progress'] },
-              category: { 
-                $in: user.departments && user.departments.length > 0 
-                  ? (user.departments.includes('All') ? [] : user.departments)
-                  : (user.department && user.department !== 'All' ? [user.department] : [])
-              }
-            }
-          ];
+          // Show issues that are:
+          // 1. Assigned specifically to this user, OR
+          // 2. Assigned to supervisor role (assignedRole = 'supervisor') and match user's department
+          const baseCondition = {
+            assignedRole: 'supervisor',
+            $or: [
+              { assignedTo: null },
+              { assignedTo: { $exists: false } }
+            ]
+          };
           
-          // Filter by department if not 'All'
-          const userDepartments = user.departments && user.departments.length > 0 
-            ? user.departments 
-            : (user.department ? [user.department] : []);
-          
-          if (!userDepartments.includes('All') && userDepartments.length > 0) {
-            if (filter.$or) {
-              filter.$or = filter.$or.map(condition => {
-                if (condition.category) {
-                  condition.category = { $in: userDepartments };
-                }
-                return condition;
-              });
-            } else {
-              filter.category = { $in: userDepartments };
-            }
+          // SUPERVISORS: Only see issues from their own department
+          if (userDepartments.length > 0) {
+            baseCondition.category = { $in: userDepartments };
           }
+          
+          filter.$or = [
+            { assignedTo: user._id }, // Specifically assigned to this user
+            baseCondition
+          ];
         }
-        // Commissioner: See ALL complaints from ALL departments
+        // Commissioner: See only issues assigned to commissioner level
         else if (user.role === 'commissioner') {
-          // No additional filtering - can see everything
+          // COMMISSIONERS: ONLY see issues that are assigned to commissioner level
+          const baseCondition = {
+            assignedRole: 'commissioner',
+            $or: [
+              { assignedTo: null },
+              { assignedTo: { $exists: false } }
+            ]
+          };
+          
+          // Commissioners with 'All' departments see ALL commissioner-level issues
+          // Commissioners with specific departments only see issues from their departments
+          if (!hasAllDepartments && userDepartments.length > 0) {
+            baseCondition.category = { $in: userDepartments };
+          }
+          
+          filter.$or = [
+            { assignedTo: user._id }, // Specifically assigned to this user
+            baseCondition
+          ];
         }
       } else {
         // Fallback for other roles

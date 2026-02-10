@@ -391,9 +391,9 @@ const ReportIssue = ({ user }) => {
         }
       }
 
-      // Optionally map ML priority to backend priority if provided
-      if (mlResult && mlResult.priority) {
-        issueData.priority = mlResult.priority === 'urgent' ? 'urgent' : 'medium';
+      // Optionally map ML urgency to backend priority if provided
+      if (mlResult && mlResult.urgency) {
+        issueData.priority = mlResult.urgency;
       }
 
       // Ensure priority is set if not provided

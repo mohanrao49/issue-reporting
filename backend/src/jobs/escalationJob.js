@@ -13,7 +13,7 @@ class EscalationJob {
 
   /**
    * Start the escalation cron job
-   * Runs every 15 minutes
+   * Runs every 15 minutes (normal operation)
    */
   start() {
     if (this.job) {
@@ -21,7 +21,7 @@ class EscalationJob {
       return;
     }
 
-    // Run every 15 minutes: '*/15 * * * *'
+    // Run every 15 minutes: '*/15 * * * *' (normal operation)
     this.job = cron.schedule('*/15 * * * *', async () => {
       if (this.isRunning) {
         console.log('Escalation check already in progress, skipping...');
@@ -58,7 +58,7 @@ class EscalationJob {
       timezone: 'Asia/Kolkata'
     });
 
-    console.log('Auto-escalation cron job started (runs every 15 minutes)');
+    console.log('Auto-escalation cron job started (runs every 15 minutes for normal operation)');
   }
 
   /**
